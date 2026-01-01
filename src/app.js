@@ -9,10 +9,16 @@ const app = express();
 // Middlewares
 app.use(
   cors({
-    origin: "*", // safe for now, we'll restrict after deployment
-    methods: ["GET", "POST"]
+    origin: [
+      "http://localhost:5173",
+      "https://portfolio-five-lac-78.vercel.app/",
+      "https://harshmundada-portfolio-git-main-harshmundada25.vercel.app"
+    ],
+    methods: ["GET", "POST"],
+    credentials: false
   })
 );
+
 app.use(express.json());
 
 // Routes
