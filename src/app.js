@@ -9,15 +9,12 @@ const app = express();
 // Middlewares
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://portfolio-five-lac-78.vercel.app/",
-      "https://harshmundada-portfolio-git-main-harshmundada25.vercel.app"
-    ],
-    methods: ["GET", "POST"],
-    credentials: false
+    origin: true, // allow all origins
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
   })
 );
+
 
 app.use(express.json());
 
