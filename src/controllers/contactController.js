@@ -16,8 +16,10 @@ export const submitContactForm = async (req, res) => {
     const newContact = new Contact({ name, email, message });
     await newContact.save();
 
-    // Send email notification
-    await sendEmail({ name, email, message });
+    // Send email WITHOUT blocking API response
+    sendEmail({ name, email, message }).catch(err =>
+      console.error("Email failed:", err.message)
+    );
 
     res.status(201).json({
       success: true,
