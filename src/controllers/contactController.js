@@ -12,19 +12,21 @@ export const submitContactForm = async (req, res) => {
       });
     }
 
-    // Save to MongoDB
+    // Save to MongoDB (CRITICAL)
     const newContact = new Contact({ name, email, message });
     await newContact.save();
 
-    // Send email WITHOUT blocking API response
-    sendEmail({ name, email, message }).catch(err =>
-      console.error("Email failed:", err.message)
-    );
+    // Send email (NON-BLOCKING)
+    sendEmail({ name, email, message }).catch(err => {
+      console.error("📧 Email failed:", err.message);
+    });
 
+    // Respond immediately
     res.status(201).json({
       success: true,
       message: "Message sent successfully"
     });
+
   } catch (error) {
     console.error("❌ Contact error:", error.message);
     res.status(500).json({
