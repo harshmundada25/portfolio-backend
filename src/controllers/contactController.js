@@ -12,24 +12,26 @@ export const submitContactForm = async (req, res) => {
       });
     }
 
-    // Save to MongoDB (CRITICAL)
+    // 1️⃣ Save to MongoDB
     const newContact = new Contact({ name, email, message });
     await newContact.save();
 
-    // Send email (NON-BLOCKING)
-    sendEmail({ name, email, message }).catch(err => {
-      console.error("📧 Email failed:", err.message);
-    });
+    // 2️⃣ Email (fully isolated)
+    try {
+      await sendEmail({ name, email, message });
+    } catch (emailError) {
+      console.error("📧 Email failed:", emailError.message);
+    }
 
-    // Respond immediately
-    res.status(201).json({
+    // 3️⃣ Respond SUCCESS no matter what
+    return res.status(201).json({
       success: true,
       message: "Message sent successfully"
     });
 
   } catch (error) {
-    console.error("❌ Contact error:", error.message);
-    res.status(500).json({
+    console.error("❌ Contact error:", error);
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
