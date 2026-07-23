@@ -1,7 +1,15 @@
+import mongoose from "mongoose";
 import Contact from "../models/contact.js";
 
 export const getAllMessages = async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Database temporarily unavailable. Please try again shortly."
+      });
+    }
+
     const messages = await Contact.find().sort({ createdAt: -1 });
 
     res.status(200).json({

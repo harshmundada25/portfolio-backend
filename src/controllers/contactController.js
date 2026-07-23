@@ -1,5 +1,6 @@
+import mongoose from "mongoose";
 import Contact from "../models/contact.js";
-import sendEmail from "../utils/sendEmail.js";
+import { queueContactNotification } from "../utils/sendEmail.js";
 
 export const submitContactForm = async (req, res) => {
   try {
@@ -12,19 +13,27 @@ export const submitContactForm = async (req, res) => {
       });
     }
 
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Database temporarily unavailable. Please try again shortly."
+      });
+    }
+
     // Save to MongoDB (CRITICAL)
     const newContact = new Contact({ name, email, message });
     await newContact.save();
 
-    // Send email (NON-BLOCKING)
-    sendEmail({ name, email, message }).catch(err => {
-      console.error("📧 Email failed:", err.message);
+    // Queue email notification with retry and duplicate protection.
+    void queueContactNotification(newContact._id).catch((err) => {
+      console.error("📧 Notification queue failed:", err.message);
     });
 
     // Respond immediately
     res.status(201).json({
       success: true,
-      message: "Message sent successfully"
+      message: "Message sent successfully",
+      notificationStatus: "queued"
     });
 
   } catch (error) {

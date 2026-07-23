@@ -2,6 +2,19 @@ import mongoose from "mongoose";
 
 const contactSchema = new mongoose.Schema(
   {
+    notificationStatus: {
+      type: String,
+      enum: ["pending", "queued", "sent", "failed"],
+      default: "pending"
+    },
+    notificationSentAt: {
+      type: Date,
+      default: null
+    },
+    notificationError: {
+      type: String,
+      default: null
+    },
     name: {
       type: String,
       required: true,
