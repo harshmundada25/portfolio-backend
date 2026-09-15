@@ -14,7 +14,12 @@ const createTransporter = () => {
   }
 
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
@@ -31,6 +36,19 @@ const getTransporter = () => {
 
   return transporter;
 };
+
+const isTransportConnectionError = (error) =>
+  ["ETIMEDOUT", "ECONNECTION", "ECONNRESET", "EAI_AGAIN", "ENOTFOUND", "ESOCKET"]
+    .includes(error?.code);
+
+const getEmailErrorDetails = (error) =>
+  ["message", "code", "command", "response", "responseCode"]
+    .reduce((details, field) => {
+      if (error?.[field] !== undefined) {
+        details[field] = error[field];
+      }
+      return details;
+    }, {});
 
 const sendEmail = async ({ name, email, message }) => {
   const recipient = getAdminRecipient();
@@ -53,7 +71,32 @@ const sendEmail = async ({ name, email, message }) => {
     `
   };
 
-  await getTransporter().sendMail(mailOptions);
+  try {
+    await getTransporter().sendMail(mailOptions);
+  } catch (error) {
+    if (isTransportConnectionError(error)) {
+      transporter?.close();
+      transporter = null;
+    }
+
+    throw error;
+  }
+};
+
+export const verifyEmailConnection = async () => {
+  try {
+    await getTransporter().verify();
+    console.log("[Email] SMTP connection verified");
+    return true;
+  } catch (error) {
+    if (isTransportConnectionError(error)) {
+      transporter?.close();
+      transporter = null;
+    }
+
+    console.error("[Email] SMTP verification failed:", getEmailErrorDetails(error));
+    return false;
+  }
 };
 
 const buildRetryDelay = (attempt) => Math.min(INITIAL_RETRY_DELAY_MS * (2 ** (attempt - 1)), 30000);
@@ -115,7 +158,10 @@ export const queueContactNotification = (contactId) => {
       job.resolve?.("sent");
     } catch (error) {
       job.attempts += 1;
-      console.error(`[Email] Notification attempt ${job.attempts} failed for ${jobKey}: ${error.message}`);
+      console.error(
+        `[Email] Notification attempt ${job.attempts} failed for ${jobKey}:`,
+        getEmailErrorDetails(error)
+      );
 
       await Contact.updateOne(
         { _id: contactId },
